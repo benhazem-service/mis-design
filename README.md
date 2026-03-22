@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة خدمات الطباعة والكراء (3D Cloud)</title>
+    <title>نظام إدارة خدمات الطباعة والكراء (Cloud)</title>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -10,322 +10,265 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* ===== متغيرات الألوان المستقبلية ===== */
+        /* ===== متغيرات الألوان ===== */
         :root {
             --primary: #3b82f6; --primary-hover: #2563eb;
+            --bg-body: #f8fafc; --bg-card: #ffffff;
+            --text-main: #334155; --text-muted: #64748b;
+            --border: #e2e8f0;
             --accent: #10b981; --accent-hover: #059669;
             --warning: #f97316; --danger: #ef4444; --success: #22c55e;
-            --indigo: #6366f1; --whatsapp: #25D366;
-            --text-main: #1e293b; --text-muted: #64748b;
-            
-            /* ألوان الزجاج والنيومورفيزم */
-            --glass-bg: rgba(255, 255, 255, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.8);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            --indigo: #4f46e5; --whatsapp: #25D366;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+        /* ===== إعادة ضبط شاملة (Reset & Full Screen) ===== */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; /* يضمن عدم خروج المحتوى عن الإطار */
+            font-family: 'Tajawal', sans-serif; 
+        }
         
-        body { 
+        html, body { 
+            width: 100%; 
+            min-height: 100vh; 
+            background-color: var(--bg-body); 
             color: var(--text-main); 
             line-height: 1.6; 
-            min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: hidden; /* يمنع التمرير الأفقي تماماً */
         }
 
         /* =========================================================
-           الخلفية الديناميكية (Animated Blobs)
-           ========================================================= */
-        .bg-shapes {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1; overflow: hidden; background: #f0f4f8;
-        }
-        .shape {
-            position: absolute; filter: blur(90px); border-radius: 50%;
-            animation: float 20s infinite alternate ease-in-out;
-        }
-        .shape-1 { width: 500px; height: 500px; background: rgba(59, 130, 246, 0.3); top: -10%; right: -10%; }
-        .shape-2 { width: 400px; height: 400px; background: rgba(16, 185, 129, 0.3); bottom: -10%; left: -10%; animation-delay: -5s; }
-        .shape-3 { width: 600px; height: 600px; background: rgba(99, 102, 241, 0.2); top: 30%; left: 30%; animation-delay: -10s; }
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(80px, 50px) scale(1.1); }
-        }
-
-        /* فئة الزجاج الشاملة (Glass Panel) */
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-top: 1px solid rgba(255,255,255,1);
-            border-right: 1px solid rgba(255,255,255,1);
-            box-shadow: var(--glass-shadow);
-            border-radius: 24px;
-        }
-
-        /* =========================================================
-           إعدادات الطباعة (بدون زجاج)
+           إعدادات الطباعة
            ========================================================= */
         .print-only { display: none; }
         @media print {
             @page { size: A5 portrait; margin: 0; }
             .no-print { display: none !important; }
-            .print-only { display: block !important; width: 100vw; height: 100vh; background: white; position: absolute; top: 0; left: 0; color: black; overflow: hidden; }
-            body, html { background-color: white; margin: 0; padding: 0; height: 100%; overflow: hidden; }
-            .bg-shapes { display: none; }
-            .receipt-wrapper { width: 148mm; height: 209mm; margin: 0 auto; padding: 8mm 10mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-            .receipt-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 5px; }
-            .print-logo { max-height: 60px; max-width: 180px; object-fit: contain; margin: 0 auto 5px; display: block; }
-            .receipt-header h2 { margin-bottom: 2px; font-size: 20px; font-weight: 900; }
-            .receipt-header p { font-size: 13px; margin: 0; font-weight: bold; color: #444; }
-            .receipt-title { text-align: center; font-size: 16px; font-weight: 900; margin: 5px 0; padding: 5px; background-color: #f1f5f9 !important; border-radius: 6px; border: 1px solid #cbd5e1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .receipt-table { width: 100%; font-size: 13px; margin-bottom: 5px; border-collapse: collapse; }
-            .receipt-table th, .receipt-table td { padding: 4px 2px; border-bottom: 1px dotted #ccc; text-align: right; }
-            .items-box { border: 2px solid #000; border-radius: 6px; padding: 8px; margin-bottom: 5px; flex-grow: 1; overflow: hidden; }
-            .items-box h4 { margin-bottom: 5px; font-size: 14px; border-bottom: 1px dashed #000; padding-bottom: 3px; }
-            .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-            .items-table td { padding: 4px 0; border-bottom: 1px dashed #eee; }
-            .receipt-financials { border: 2px solid #000; background-color: #f8fafc !important; border-radius: 6px; padding: 8px; margin-bottom: 5px; font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .receipt-financials div { display: flex; justify-content: space-between; margin-bottom: 3px; }
-            .receipt-financials .rem { font-size: 16px; font-weight: 900; border-top: 1px dashed #000; padding-top: 5px; margin-top: 3px; }
-            .receipt-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 5px; border-top: 2px solid #000; }
-            .footer-info p { font-size: 12px; margin-bottom: 3px; }
+            .print-only { display: block !important; width: 100%; background: white; position: static; color: black; }
+            body, html { background-color: white; margin: 0; padding: 0; }
+            .receipt-wrapper { width: 148mm; min-height: 209mm; margin: 0 auto; padding: 12mm 15mm; border: 1px solid transparent; }
+            .receipt-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+            .print-logo { max-height: 90px; max-width: 250px; object-fit: contain; margin: 0 auto 10px; display: block; }
+            .receipt-header h2 { margin-bottom: 5px; font-size: 26px; font-weight: 900; }
+            .receipt-header p { font-size: 15px; margin: 0; font-weight: bold; color: #444; }
+            .receipt-title { text-align: center; font-size: 20px; font-weight: 900; margin: 20px 0; padding: 10px; background-color: #f1f5f9 !important; border-radius: 8px; border: 1px solid #cbd5e1; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .receipt-table { width: 100%; font-size: 15px; margin-bottom: 20px; border-collapse: collapse; }
+            .receipt-table th, .receipt-table td { padding: 8px 5px; border-bottom: 1px dotted #ccc; text-align: right; }
+            .receipt-table th { font-weight: bold; width: 30%; color: #333; }
+            .items-box { border: 2px solid #000; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+            .items-box h4 { margin-bottom: 10px; font-size: 16px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+            .receipt-financials { border: 2px solid #000; background-color: #f8fafc !important; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .receipt-financials div { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .receipt-financials .rem { font-size: 20px; font-weight: 900; border-top: 1px dashed #000; padding-top: 10px; margin-top: 5px; }
+            .receipt-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 15px; border-top: 2px solid #000; }
+            .footer-info p { font-size: 14px; margin-bottom: 5px; }
             .qr-container { text-align: center; }
-            .qr-container img { width: 65px; height: 65px; margin: 0 auto; }
-            .qr-container p { font-size: 10px; margin-top: 3px; font-weight: bold; }
+            .qr-container img { width: 80px; height: 80px; margin: 0 auto; }
+            .qr-container p { font-size: 12px; margin-top: 5px; font-weight: bold; }
         }
 
-        /* ===== صفحة تتبع الزبون ===== */
-        #customerTrackingView { display: none; min-height: 100vh; padding: 20px; position: relative; z-index: 10;}
-        .track-container { max-width: 500px; margin: 5vh auto; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 30px; box-shadow: var(--glass-shadow); border: 1px solid var(--glass-border); overflow: hidden; }
-        .track-header { background: rgba(59, 130, 246, 0.85); color: white; padding: 30px 20px; text-align: center; }
-        .track-header h1 { font-size: 24px; font-weight: 900; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);}
+        /* =========================================================
+           شاشة التتبع للزبون
+           ========================================================= */
+        #customerTrackingView { display: none; width: 100%; min-height: 100vh; background-color: #f1f5f9; padding: 5vw; }
+        .track-container { width: 100%; max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
+        .track-header { background: var(--primary); color: white; padding: 30px 20px; text-align: center; border-radius: 0 0 30px 30px; margin-bottom: 20px;}
+        .track-header h1 { font-size: 22px; font-weight: 900; margin-bottom: 5px; }
         .track-header p { font-size: 14px; opacity: 0.9; }
-        .track-logo { max-height: 70px; border-radius: 12px; margin-bottom: 10px; background: rgba(255,255,255,0.9); padding: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
-        .track-body { padding: 25px; }
-        .track-status-box { text-align: center; padding: 20px; border-radius: 20px; margin-bottom: 20px; background: rgba(255,255,255,0.8); border: 2px solid transparent; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s; }
-        .track-status-box.s-pending { border-color: rgba(100, 116, 139, 0.3); color: var(--text-main); }
-        .track-status-box.s-processing { border-color: rgba(59, 130, 246, 0.4); color: var(--primary); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);}
-        .track-status-box.s-ready { border-color: rgba(34, 197, 94, 0.4); color: var(--success); box-shadow: 0 4px 20px rgba(34, 197, 94, 0.15);}
-        .track-status-box.s-delivered { border-color: rgba(99, 102, 241, 0.4); color: var(--indigo); }
-        .track-status-box h2 { font-size: 26px; font-weight: 900; margin-bottom: 5px; }
-        .track-details { background: rgba(255,255,255,0.7); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8); }
-        .track-details h3 { font-size: 15px; color: var(--text-muted); margin-bottom: 15px; border-bottom: 1px dashed rgba(0,0,0,0.1); padding-bottom: 8px; display: flex; align-items: center; gap: 8px;}
-        .track-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 10px; font-weight: 600; }
-        .track-total-box { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 20px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);}
+        .track-logo { max-height: 60px; border-radius: 8px; margin-bottom: 10px; background: white; padding: 5px;}
+        .track-body { padding: 0 25px 25px; }
+        .track-status-box { text-align: center; padding: 20px; border-radius: 16px; margin-bottom: 20px; background: #f8fafc; border: 2px solid var(--border); transition: 0.3s; }
+        .track-status-box.s-pending { border-color: var(--text-muted); background: #f8fafc; color: var(--text-main); }
+        .track-status-box.s-processing { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+        .track-status-box.s-ready { border-color: var(--success); background: #f0fdf4; color: var(--success); }
+        .track-status-box.s-delivered { border-color: var(--indigo); background: #e0e7ff; color: var(--indigo); }
+        .track-status-box h2 { font-size: 24px; font-weight: 900; margin-bottom: 5px; }
+        .track-details { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .track-details h3 { font-size: 14px; color: var(--text-muted); margin-bottom: 10px; border-bottom: 1px dashed var(--border); padding-bottom: 5px; }
+        .track-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px; font-weight: 500; }
+        .track-total-box { background: var(--text-main); color: white; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* ===== لوحة الإدارة (التصميم الزجاجي) ===== */
-        .admin-view { display: block; position: relative; z-index: 10; }
-        header { padding: 15px 20px; position: sticky; top: 0; z-index: 50; }
-        .navbar { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 70px; padding: 0 25px; }
-        .logo { font-size: 24px; font-weight: 900; color: var(--primary); display: flex; align-items: center; gap: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.05);}
-        .logo img { max-height: 45px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
-        .settings-btn { background: rgba(255,255,255,0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.8); padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
-        .settings-btn:hover { background: white; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); color: var(--primary); }
+        /* =========================================================
+           تخطيط لوحة الإدارة الشاملة (100% Width)
+           ========================================================= */
+        .admin-view { display: block; width: 100%; }
         
-        main { padding: 20px; max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 30px; }
-
-        /* الكروت العلوية الثلاثية الأبعاد */
-        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-        .dash-card { 
-            background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border-radius: 24px; padding: 20px; display: flex; align-items: center; gap: 15px; 
-            border: 1px solid rgba(255, 255, 255, 0.6); border-top-color: rgba(255,255,255,0.9); border-left-color: rgba(255,255,255,0.9);
-            box-shadow: 8px 8px 20px rgba(0,0,0,0.03), -4px -4px 15px rgba(255,255,255,0.8);
-            cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        header { 
+            width: 100%; 
+            background-color: var(--bg-card); 
+            padding: 0 3vw; /* مرن حسب حجم الشاشة */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            position: sticky; top: 0; z-index: 50; 
         }
-        .dash-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 12px 15px 25px rgba(0,0,0,0.06), -6px -6px 20px rgba(255,255,255,1); }
-        .card-icon { min-width: 55px; height: 55px; border-radius: 16px; display: flex; justify-content: center; align-items: center; background: white; color: var(--primary); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 4px 10px rgba(0,0,0,0.05); font-size: 24px;}
-        .card-info h3 { font-size: 15px; color: var(--text-muted); font-weight: 700; margin-bottom: 2px; }
-        .card-info .number { font-size: 26px; font-weight: 900; color: var(--text-main); }
+        .navbar { 
+            width: 100%; 
+            display: flex; justify-content: space-between; align-items: center; 
+            height: 70px; 
+        }
+        .logo { font-size: 24px; font-weight: 900; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+        .logo img { max-height: 45px; border-radius: 6px; }
         
-        .dash-card.new-order { background: linear-gradient(135deg, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.9)); border: none; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); }
-        .dash-card.new-order .card-icon { background: rgba(255, 255, 255, 0.25); color: white; box-shadow: none; }
+        .settings-btn { background-color: #f1f5f9; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 8px; transition: 0.3s; font-size: 14px; }
+        .settings-btn:hover { background-color: #e2e8f0; color: var(--primary); }
+        
+        main { 
+            width: 100%; 
+            padding: 30px 3vw; /* حواف مرنة بنسبة مئوية */
+            display: flex; flex-direction: column; gap: 25px; 
+        }
+
+        /* شبكة مرنة للكروت (Grid 100%) */
+        .dashboard-cards { 
+            width: 100%;
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* يملأ الشاشة تلقائياً */
+            gap: 20px; 
+        }
+        .dash-card { background-color: var(--bg-card); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); cursor: pointer; transition: 0.3s; width: 100%; }
+        .dash-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--primary); }
+        .card-icon { min-width: 60px; height: 60px; border-radius: 14px; display: flex; justify-content: center; align-items: center; background-color: #eff6ff; color: var(--primary); font-size: 24px;}
+        .card-info h3 { font-size: 15px; color: var(--text-muted); font-weight: 700; margin-bottom: 2px; }
+        .card-info .number { font-size: 24px; font-weight: 900; color: var(--text-main); }
+        
+        .dash-card.new-order { background-color: var(--accent); border-color: var(--accent); }
+        .dash-card.new-order .card-icon { background-color: rgba(255, 255, 255, 0.2); color: white; }
         .dash-card.new-order h3 { color: rgba(255, 255, 255, 0.9); margin-bottom: 0; }
         .dash-card.new-order .number { color: white; font-size: 18px; margin-top: 5px; }
-        .icon-warning { color: #d97706; } .icon-success { color: var(--accent); } .icon-indigo { color: var(--indigo); }
+        
+        .icon-warning { background-color: #fef3c7; color: #d97706; }
+        .icon-success { background-color: #d1fae5; color: var(--accent); }
+        .icon-indigo { background-color: #e0e7ff; color: var(--indigo); }
 
-        /* ===== التقويم الزجاجي الثلاثي الأبعاد ===== */
-        .master-calendar-container { padding: 5px; }
-        .master-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .master-header h2 { font-size: 24px; color: var(--text-main); font-weight: 900; text-shadow: 0 2px 5px rgba(255,255,255,0.8);}
-        .master-header button { background: rgba(255,255,255,0.6); box-shadow: 2px 2px 8px rgba(0,0,0,0.05), -2px -2px 8px rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.5); padding: 10px 25px; border-radius: 12px; cursor: pointer; font-weight: 800; transition: 0.3s; color: var(--text-main); }
-        .master-header button:hover { background: white; transform: translateY(-2px); box-shadow: 4px 4px 12px rgba(0,0,0,0.08), -2px -2px 8px rgba(255,255,255,1); color: var(--primary); }
+        /* ===== التقويم المرن (100% Grid) ===== */
+        .master-calendar-container { width: 100%; background-color: var(--bg-card); border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        .master-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 3vw; border-bottom: 1px solid var(--border); }
+        .master-header h2 { font-size: 22px; color: var(--text-main); font-weight: 900; }
+        .master-header button { background-color: var(--bg-body); border: 1px solid var(--border); padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        .master-header button:hover { background-color: var(--border); color: var(--primary); }
         
-        .dual-calendars { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px; }
-        .calendar-box { background: transparent; padding: 0; }
-        .month-title { text-align: center; font-size: 20px; color: var(--primary); margin-bottom: 20px; font-weight: 900; letter-spacing: 1px;}
-        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 800; font-size: 14px; color: var(--text-muted); margin-bottom: 10px; }
-        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
-        
-        /* الأيام - Neumorphism */
-        .day { 
-            background: rgba(255, 255, 255, 0.4); 
-            border-radius: 16px; 
-            min-height: 90px; padding: 10px; 
-            text-align: right; font-weight: 700; font-size: 16px;
-            box-shadow: 4px 4px 10px rgba(0,0,0,0.03), -4px -4px 10px rgba(255,255,255,0.6); 
-            border: 1px solid rgba(255,255,255,0.4);
-            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; 
-        }
-        .day:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-4px) scale(1.03); box-shadow: 8px 8px 20px rgba(0,0,0,0.06), -6px -6px 15px rgba(255,255,255,1); z-index: 5;}
-        .day.empty { background: transparent; box-shadow: none; border: none; cursor: default; }
-        
-        /* تصميم اليوم الحالي */
-        .day.today::before { 
-            content: attr(data-day); position: absolute; top: 8px; right: 8px; 
-            background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white; 
-            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; 
-            border-radius: 50%; font-weight: 900; font-size: 14px; z-index: 2;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
+        .dual-calendars { width: 100%; display: grid; grid-template-columns: 1fr 1fr; background-color: var(--border); gap: 1px;}
+        .calendar-box { background-color: var(--bg-card); padding: 20px; width: 100%; }
+        .month-title { text-align: center; font-size: 18px; color: var(--primary); margin-bottom: 15px; font-weight: 900; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 800; font-size: 14px; color: var(--text-muted); padding: 10px 0; background-color: #f8fafc; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: var(--border); border: 1px solid var(--border); border-top: none; }
+        .day { background-color: var(--bg-card); min-height: 90px; padding: 10px; text-align: right; font-weight: 700; cursor: pointer; transition: 0.2s; position: relative; }
+        .day:hover { background-color: #f1f5f9; }
+        .day.empty { background-color: #fcfcfc; cursor: default; }
+        .day.today::before { content: attr(data-day); position: absolute; top: 5px; right: 5px; background-color: var(--primary); color: white; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 900; font-size: 14px; z-index: 2; }
         .day.today .day-number { visibility: hidden; }
-        
-        /* تصميم الأيام المليئة بالطلبات */
-        .day.has-orders { 
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); 
-            border: 1px solid rgba(16, 185, 129, 0.3); 
-            box-shadow: 4px 4px 12px rgba(16, 185, 129, 0.1), -4px -4px 10px rgba(255,255,255,0.7);
-        }
-        .day.has-orders:hover { background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1)); }
-        
-        /* الشارة المضيئة لعدد الطلبات */
-        .order-badge { 
-            position: absolute; bottom: 8px; left: 8px; 
-            background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; 
-            border-radius: 50%; width: 26px; height: 26px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 13px; font-weight: 900; 
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5); z-index: 5; 
-        }
+        .day.has-orders { background-color: #f0fdf4; border-right: 4px solid var(--accent); }
+        .day.has-orders:hover { background-color: #dcfce7; }
+        .order-badge { position: absolute; bottom: 8px; left: 8px; background-color: var(--danger); color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 5; }
 
-        /* ===== النوافذ المنبثقة (الزجاجية) ===== */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.4s ease; }
+        /* ===== النوافذ المنبثقة المرنة ===== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(15, 23, 42, 0.6); z-index: 1000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: all 0.3s ease; padding: 2vh 2vw; }
         .modal-overlay.active { opacity: 1; visibility: visible; }
-        .modal-box { 
-            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(25px); 
-            border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-            width: 95%; max-width: 850px; border-radius: 28px; 
-            transform: translateY(-30px) scale(0.95); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
-            max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; 
-        }
-        .modal-overlay.active .modal-box { transform: translateY(0) scale(1); }
-        .fullscreen-modal { max-width: 1200px !important; width: 98%; height: 95vh; }
+        .modal-box { background-color: var(--bg-card); width: 100%; max-width: 800px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: translateY(-20px); transition: all 0.3s ease; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
         
-        .modal-header { padding: 25px 30px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 10; }
-        .modal-header h2 { font-size: 22px; color: var(--text-main); font-weight: 900; display: flex; align-items: center; gap: 10px; }
-        .close-btn { background: rgba(239, 68, 68, 0.1); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; font-size: 20px; color: var(--danger); cursor: pointer; transition: 0.3s; }
-        .close-btn:hover { background: var(--danger); color: white; transform: rotate(90deg);}
-        .modal-body { padding: 30px; display: flex; flex-direction: column; gap: 25px; overflow-y: auto; }
+        /* جعل النافذة الشاملة 100% تقريباً */
+        .fullscreen-modal { max-width: 1400px !important; width: 100%; height: 96vh; }
         
-        .tabs-header { display: flex; border-bottom: 1px solid rgba(0,0,0,0.05); background: rgba(255,255,255,0.9); position: sticky; top: 78px; z-index: 9; padding: 0 20px;}
-        .tab-btn { flex: 1; padding: 18px; background: none; border: none; font-size: 16px; font-weight: 800; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;}
-        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
-        .tab-content { display: none; padding: 25px 0; }
+        .modal-header { padding: 20px 3vw; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg-card); z-index: 10; }
+        .modal-header h2 { font-size: 20px; color: var(--text-main); display: flex; align-items: center; gap: 10px; font-weight: 900;}
+        .close-btn { background: none; border: none; font-size: 28px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .close-btn:hover { color: var(--danger); }
+        .modal-body { padding: 25px 3vw; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        
+        .tabs-header { display: flex; width: 100%; border-bottom: 1px solid var(--border); background: var(--bg-card); position: sticky; top: 73px; z-index: 9; }
+        .tab-btn { flex: 1; padding: 15px; background: none; border: none; font-size: 16px; font-weight: 900; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); background: #f8fafc; }
+        .tab-content { display: none; padding: 25px 3vw; background: #f8fafc; width: 100%; }
         .tab-content.active { display: block; }
 
-        /* تتبع المواعيد ثلاثي الأبعاد */
-        .tracking-card { display: flex; justify-content: space-between; align-items: center; padding: 20px 25px; border-radius: 20px; margin-bottom: 20px; box-shadow: 4px 4px 15px rgba(0,0,0,0.03), -4px -4px 15px rgba(255,255,255,1); border: 1px solid rgba(255,255,255,0.6); border-right-width: 8px; background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); transition: 0.3s;}
-        .tracking-card:hover { transform: translateY(-3px); box-shadow: 6px 6px 20px rgba(0,0,0,0.05), -6px -6px 20px rgba(255,255,255,1); }
-        .tracking-info h4 { margin-bottom: 8px; color: var(--text-main); font-size: 18px; font-weight: 900;}
-        .tracking-info p { color: var(--text-muted); font-size: 14px; margin-bottom: 3px; font-weight: 600;}
-        .tracking-status { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
-        .days-badge { padding: 8px 20px; border-radius: 20px; font-weight: 900; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .track-red { border-right-color: var(--danger); } .track-red .days-badge { background: linear-gradient(135deg, var(--danger), #b91c1c); color: white; }
-        .track-orange { border-right-color: var(--warning); } .track-orange .days-badge { background: linear-gradient(135deg, var(--warning), #c2410c); color: white; }
-        .track-green { border-right-color: var(--success); } .track-green .days-badge { background: linear-gradient(135deg, var(--success), #15803d); color: white; }
+        .tracking-card { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid var(--border); border-right-width: 6px; background: white; }
+        .tracking-info h4 { margin-bottom: 5px; color: var(--text-main); font-size: 16px; font-weight: 900;}
+        .tracking-info p { color: var(--text-muted); font-size: 14px; margin-bottom: 3px; }
+        .tracking-status { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .days-badge { padding: 6px 15px; border-radius: 20px; font-weight: 900; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .track-red { border-right-color: var(--danger); background: #fef2f2; } .track-red .days-badge { background: var(--danger); color: white; }
+        .track-orange { border-right-color: var(--warning); background: #fff7ed; } .track-orange .days-badge { background: var(--warning); color: white; }
+        .track-green { border-right-color: var(--success); background: #f0fdf4; } .track-green .days-badge { background: var(--success); color: white; }
 
-        /* النماذج (Forms) النيومورفية */
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-group.full-width { grid-column: span 2; }
-        .form-group label { font-size: 15px; font-weight: 800; color: var(--text-main); text-shadow: 0 1px 2px rgba(255,255,255,0.8);}
-        .form-group input, .form-group textarea, .form-group select { 
-            padding: 14px 18px; border-radius: 12px; font-size: 15px; outline: none; transition: 0.3s; 
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(255,255,255,0.5);
-            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.03), inset -2px -2px 5px rgba(255,255,255,1);
-            font-weight: 600; color: var(--text-main);
-        }
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { 
-            background: white; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
-        }
-        .calc-row { background: rgba(255,255,255,0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 4px 4px 15px rgba(0,0,0,0.02);}
-        .calc-input { font-weight: 900; font-size: 18px !important; color: var(--primary); }
-        .calc-readonly { background: rgba(226, 232, 240, 0.5) !important; color: var(--danger) !important; }
+        /* توزيع الفورمات 100% Flex/Grid */
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; width: 100%; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { font-size: 14px; font-weight: 800; color: var(--text-main); }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; transition: 0.3s; background-color: var(--bg-body); font-family: inherit;}
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); background-color: white; }
         
-        .modal-footer { padding: 20px 30px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: flex-end; gap: 15px; position: sticky; bottom: 0; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 10; border-radius: 0 0 28px 28px;}
-        .btn-cancel { padding: 12px 25px; border: 1px solid var(--border); background: white; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+        .calc-row { background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .calc-input { font-weight: 900; font-size: 18px !important; color: var(--primary); }
+        .calc-readonly { background-color: #e2e8f0 !important; cursor: not-allowed; color: var(--danger) !important; }
+        
+        .modal-footer { padding: 20px 3vw; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 15px; position: sticky; bottom: 0; background: var(--bg-card); z-index: 10; width: 100%;}
+        .btn-cancel { padding: 10px 20px; border: 1px solid var(--border); background: white; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-cancel:hover { background: #f1f5f9; }
-        .btn-save { padding: 12px 30px; background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; transition: 0.3s; font-size: 16px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);}
-        .btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
+        .btn-save { padding: 10px 25px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; font-size: 16px; display: flex; align-items: center; gap: 8px;}
+        .btn-save:hover { background: var(--accent-hover); }
 
-        .btn-add-item { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; height: 50px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
-        .btn-add-item:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4); }
-        .btn-add-rental { background: linear-gradient(135deg, var(--indigo), #4338ca); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);}
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: rgba(255,255,255,0.8); border: 1px solid var(--glass-border); border-radius: 12px; font-size: 15px; margin-bottom: 8px; font-weight: 600; box-shadow: 2px 2px 8px rgba(0,0,0,0.02);}
-        .cart-item button { background: rgba(239, 68, 68, 0.1); width: 28px; height: 28px; border-radius: 50%; border: none; color: var(--danger); cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
-        .cart-item button:hover { background: var(--danger); color: white; }
+        .btn-add-item { background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.2s; height: 46px; display: flex; align-items: center; justify-content: center; }
+        .btn-add-item:hover { background-color: var(--primary-hover); }
+        .btn-add-rental { background-color: var(--indigo); }
+        .btn-add-rental:hover { background-color: #4338ca; }
+        
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: white; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 5px; width: 100%; font-weight: 700;}
+        .cart-item button { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: 900; font-size: 18px; padding: 0 5px; }
 
-        .btn-print { background: linear-gradient(135deg, var(--text-main), #0f172a); color: white; padding: 12px 25px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);}
-        .btn-print:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-        .btn-print-small { background: white; border: 1px solid var(--border); padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);}
-        .btn-print-small:hover { background: #f8fafc; border-color: var(--primary); color: var(--primary); transform: translateY(-1px);}
+        .btn-print { background-color: var(--text-main); color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-print:hover { background-color: #1e293b; }
+        .btn-print-small { background-color: white; border: 1px solid var(--border); padding: 8px 15px; border-radius: 6px; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .btn-print-small:hover { background-color: #f1f5f9; border-color: var(--primary); color: var(--primary); }
+        .btn-export { background-color: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 5px; width: 100%; justify-content: center;}
+        .btn-import { background-color: var(--warning); color: white; padding: 10px 20px; border: none; border-radius: 6px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 5px; width: 100%; justify-content: center;}
 
-        /* كروت عرض الطلبات اليومية */
-        .day-order-card { background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.8); padding: 20px; border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 15px; box-shadow: 4px 4px 15px rgba(0,0,0,0.02), -4px -4px 15px rgba(255,255,255,1); transition: 0.3s; }
-        .day-order-card:hover { transform: translateY(-2px); box-shadow: 6px 6px 20px rgba(0,0,0,0.04), -6px -6px 20px rgba(255,255,255,1); }
-        .order-top-row { display: flex; justify-content: space-between; align-items: flex-start; }
-        .day-order-info h4 { color: var(--text-main); font-size: 18px; margin-bottom: 8px; font-weight: 900;}
-        .day-order-info p { color: var(--text-muted); font-size: 15px; margin-bottom: 4px; font-weight: 600;}
-        .day-order-price { text-align: left; background: rgba(255,255,255,0.9); padding: 12px 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); min-width: 140px;}
+        .day-order-card { width: 100%; background: white; border: 1px solid var(--border); padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .order-top-row { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .day-order-info h4 { color: var(--text-main); font-size: 18px; margin-bottom: 5px; font-weight: 900;}
+        .day-order-info p { color: var(--text-muted); font-size: 15px; margin-bottom: 3px; font-weight: 500;}
+        .day-order-price { text-align: left; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; min-width: 140px;}
         .day-order-price .total { font-weight: 900; color: var(--primary); font-size: 16px;}
         .day-order-price .rem { font-size: 14px; color: var(--danger); font-weight: 800;}
-        .empty-day-msg { text-align: center; color: var(--text-muted); padding: 40px 10px; font-size: 18px; font-weight: 800; background: rgba(255,255,255,0.5); border-radius: 20px; border: 2px dashed rgba(0,0,0,0.1);}
-        .order-id-badge { background: linear-gradient(135deg, var(--primary), #8b5cf6); color: white; padding: 4px 12px; border-radius: 8px; font-size: 14px; font-weight: 800; box-shadow: 0 2px 5px rgba(59, 130, 246, 0.3);}
-        .status-bar { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 15px; }
-        .status-select { padding: 8px 15px; border-radius: 10px; border: 1px solid var(--border); font-weight: 800; background: white; cursor: pointer; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
-        .btn-whatsapp { background: linear-gradient(135deg, var(--whatsapp), #16a34a); color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 10px rgba(37,211,102,0.3);}
+        .empty-day-msg { text-align: center; color: var(--text-muted); padding: 30px 10px; font-size: 16px; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border); width: 100%; font-weight: 800;}
+        .order-id-badge { background-color: #eff6ff; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 14px; font-weight: 900; }
         
-        .settings-section { margin-bottom: 30px; background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 4px 4px 15px rgba(0,0,0,0.02); }
-        .settings-section h3 { margin-bottom: 20px; color: var(--primary); font-size: 18px; font-weight: 900; display: flex; align-items: center; gap: 8px;}
-        .service-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(255,255,255,0.8); border-radius: 12px; margin-bottom: 10px; border: 1px solid rgba(0,0,0,0.03); box-shadow: 2px 2px 8px rgba(0,0,0,0.02); font-weight: 700;}
-        .service-list-item button { background: rgba(239, 68, 68, 0.1); width: 30px; height: 30px; border-radius: 8px; border: none; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 16px; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
-        .service-list-item button:hover { background: var(--danger); color: white; }
-        .cloud-sync-status { font-size: 13px; display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: 900; background: rgba(209, 250, 229, 0.8); backdrop-filter: blur(5px); padding: 6px 15px; border-radius: 20px; margin-right: 10px; border: 1px solid rgba(209, 250, 229, 1); box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);}
+        .status-bar { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed var(--border); padding-top: 15px; width: 100%; }
+        .status-select { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-weight: 900; background: var(--bg-body); cursor: pointer; outline: none; }
+        .btn-whatsapp { background-color: var(--whatsapp); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;}
+        
+        .settings-section { width: 100%; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 20px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .settings-section h3 { margin-bottom: 15px; color: var(--primary); font-size: 18px; font-weight: 900; display: flex; align-items: center; gap: 8px;}
+        .service-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: var(--bg-body); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); width: 100%; font-weight: 700;}
+        .service-list-item button { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: 900; font-size: 20px;}
+        .cloud-sync-status { font-size: 13px; display: flex; align-items: center; gap: 5px; color: var(--accent); font-weight: 900; background: #d1fae5; padding: 6px 15px; border-radius: 20px; margin-right: 15px; }
 
-        @media (max-width: 768px) {
-            .form-row { grid-template-columns: 1fr; }
-            .form-group.full-width { grid-column: span 1; }
-            .dual-calendars { grid-template-columns: 1fr; }
+        /* =========================================================
+           تجاوب الهواتف 100%
+           ========================================================= */
+        @media (max-width: 900px) {
+            .dual-calendars { grid-template-columns: 1fr; gap: 0; }
             .order-top-row { flex-direction: column; gap: 15px; }
             .day-order-price { text-align: right; width: 100%; display: flex; justify-content: space-between;}
-            .status-bar { flex-direction: column; align-items: stretch; gap: 15px; }
-            .tracking-card { flex-direction: column; align-items: stretch; gap: 15px; border-right-width: 1px; border-top-width: 6px;}
-            .tracking-status { align-items: center; flex-direction: row; justify-content: space-between; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 15px; }
+            .status-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .tracking-card { flex-direction: column; align-items: stretch; gap: 15px;}
+            .tracking-status { align-items: center; flex-direction: row; justify-content: space-between; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; }
             .cloud-sync-status span { display: none; }
-            .bg-shapes { display: none; } /* تحسين الأداء للهواتف */
-            body { background: #f0f4f8; }
+            .navbar { padding: 0 15px; }
+            .logo span { display: none; } /* في الهواتف، نكتفي بالشعار إن وجد */
         }
     </style>
 </head>
 <body>
 
-    <!-- 🎨 الخلفية الديناميكية (الكرات المضيئة) -->
-    <div class="bg-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-    </div>
-
     <!-- 🌟 شاشة تتبع الزبون 🌟 -->
     <div id="customerTrackingView" class="no-print">
         <div class="track-container">
             <div class="track-header">
-                <img id="trackShopLogo" src="" alt="الشعار" class="track-logo" style="display:none; margin: 0 auto 15px;">
+                <img id="trackShopLogo" src="" alt="الشعار" class="track-logo" style="display:none; margin: 0 auto 10px;">
                 <h1 id="trackShopName">المطبعة</h1>
-                <p>تتبع حالة طلبك مباشرة في الوقت الفعلي</p>
+                <p>تتبع حالة طلبك مباشرة</p>
             </div>
             <div class="track-body" id="trackBodyContent">
                 <div style="text-align: center; padding: 50px 0;">
@@ -335,84 +278,94 @@
         </div>
     </div>
 
-    <!-- 🖨️ قسم الطباعة (A5 الاحترافي) -->
+    <!-- 🖨️ قسم الطباعة (A5 الاحترافي 100% عرض) -->
     <div id="printReceiptArea" class="print-only">
         <div class="receipt-wrapper">
-            <div class="receipt-header">
-                <img id="r-shopLogo" src="" alt="الشعار" class="print-logo" style="display:none;">
-                <h2 id="r-shopName">اسم المطبعة</h2>
-                <p id="r-tagline">الشعار اللفظي</p>
-            </div>
-            <div class="receipt-title">وصل تسليم طلبية</div>
-            <table class="receipt-table">
-                <tr><th>رقم الطلب:</th><td id="r-id" style="font-weight:900; font-size: 16px;">--</td></tr>
-                <tr><th>تاريخ التسجيل:</th><td id="r-today">--</td></tr>
-                <tr><th>العميل:</th><td id="r-name" style="font-weight:bold;">--</td></tr>
-                <tr><th>الهاتف:</th><td id="r-phone" dir="ltr" style="text-align: right;">--</td></tr>
-                <tr><th>موعد التسليم:</th><td id="r-date" style="font-weight:900; color:#000;">--</td></tr>
-            </table>
-            <div class="items-box">
-                <h4>الخدمات المطلوبة:</h4>
-                <div id="r-items-list"></div>
-            </div>
-            <div class="receipt-financials">
-                <div><span>المبلغ الإجمالي:</span> <strong id="r-total">--</strong></div>
-                <div><span>العربون المدفوع:</span> <strong id="r-deposit">--</strong></div>
-                <div class="rem"><span>الباقي للأداء:</span> <span id="r-remaining">--</span></div>
-            </div>
-            <div class="receipt-footer">
-                <div class="footer-info">
-                    <p><strong>الهاتف:</strong> <span id="r-shopPhone"></span></p>
-                    <p><strong>العنوان:</strong> <span id="r-shopAddress"></span></p>
-                    <p style="margin-top: 10px; font-weight:bold; font-size: 14px;">شكراً لثقتكم بنا!</p>
+            <div>
+                <div class="receipt-header">
+                    <img id="r-shopLogo" src="" alt="الشعار" class="print-logo" style="display:none;">
+                    <h2 id="r-shopName">اسم المطبعة</h2>
+                    <p id="r-tagline">الشعار اللفظي</p>
                 </div>
-                <div class="qr-container">
-                    <div id="r-qrcode"></div>
-                    <p>امسح الرمز للتتبع</p>
+                
+                <div class="receipt-title">وصل تسليم طلبية</div>
+                
+                <table class="receipt-table">
+                    <tr><th>رقم الطلب:</th><td id="r-id" style="font-weight:900; font-size: 18px;">--</td></tr>
+                    <tr><th>تاريخ التسجيل:</th><td id="r-today">--</td></tr>
+                    <tr><th>العميل:</th><td id="r-name" style="font-weight:bold;">--</td></tr>
+                    <tr><th>الهاتف:</th><td id="r-phone" dir="ltr" style="text-align: right;">--</td></tr>
+                    <tr><th>موعد التسليم:</th><td id="r-date" style="font-weight:bold; color:#000;">--</td></tr>
+                </table>
+
+                <div class="items-box">
+                    <h4>الخدمات المطلوبة:</h4>
+                    <div id="r-items-list"></div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="receipt-financials">
+                    <div><span>المبلغ الإجمالي:</span> <strong id="r-total">--</strong></div>
+                    <div><span>العربون المدفوع:</span> <strong id="r-deposit">--</strong></div>
+                    <div class="rem"><span>الباقي للأداء:</span> <span id="r-remaining">--</span></div>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="footer-info">
+                        <p><strong>الهاتف:</strong> <span id="r-shopPhone"></span></p>
+                        <p><strong>العنوان:</strong> <span id="r-shopAddress"></span></p>
+                        <p style="margin-top: 10px; font-weight:bold; font-size: 15px;">شكراً لثقتكم بنا!</p>
+                    </div>
+                    <div class="qr-container">
+                        <div id="r-qrcode"></div>
+                        <p>امسح الرمز للتتبع</p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 💻 غلاف التطبيق (لوحة الإدارة - 3D Glassmorphism) -->
+
+    <!-- 💻 غلاف التطبيق 100% Width -->
     <div class="admin-view no-print" id="adminAppView">
-        
-        <header class="glass-panel" style="margin: 20px auto; max-width: 1400px; border-radius: 20px; z-index: 100;">
-            <div class="navbar" style="height: auto; padding: 15px;">
+        <header>
+            <div class="navbar">
                 <div class="logo">
                     <img id="mainAppLogo" src="" alt="Logo" style="display:none;">
                     <span id="mainAppNameText">مطبعتي</span>
                 </div>
                 <div style="display: flex; align-items: center;">
                     <div class="cloud-sync-status" id="cloudStatus">☁️ <span>متصل ومزامن</span></div>
-                    <button class="settings-btn" onclick="openSettingsModal()">⚙️ الإعدادات</button>
+                    <button class="settings-btn" onclick="openControlPanelModal()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        الطلبيات والإعدادات
+                    </button>
                 </div>
             </div>
         </header>
 
         <main>
-            <!-- الكروت العلوية (الإحصائيات والأقسام) -->
             <div class="dashboard-cards">
                 <div class="dash-card new-order" onclick="openNewOrderModal()">
-                    <div class="card-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
-                    <div class="card-info"><h3>إنشاء طلب / موعد</h3><div class="number">إضافة جديدة +</div></div>
+                    <div class="card-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+                    <div class="card-info"><h3>موعد / طلب جديد</h3><div class="number">إضافة +</div></div>
                 </div>
                 <div class="dash-card" onclick="openTrackingModal()">
-                    <div class="card-icon icon-warning"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                    <div class="card-icon icon-warning"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
                     <div class="card-info"><h3>قيد الانتظار / الإنجاز</h3><div class="number" id="statsPending">0 طلب</div></div>
                 </div>
                 <div class="dash-card" onclick="openListModal('delivered')">
-                    <div class="card-icon icon-success"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
+                    <div class="card-icon icon-success"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>
                     <div class="card-info"><h3>طلبات مسلمة</h3><div class="number" id="statsDelivered">0 طلب</div></div>
                 </div>
                 <div class="dash-card" onclick="openListModal('rentals')">
-                    <div class="card-icon icon-indigo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+                    <div class="card-icon icon-indigo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
                     <div class="card-info"><h3>لوازم في الكراء</h3><div class="number" id="statsRented">0 طلب</div></div>
                 </div>
             </div>
 
-            <!-- التقويم المزدوج الزجاجي -->
-            <div class="master-calendar-container glass-panel">
+            <div class="master-calendar-container">
                 <div class="master-header">
                     <button id="nextMonth">❮ التالي</button>
                     <h2 id="masterYearDisplay">2026</h2>
@@ -455,26 +408,26 @@
                     <div class="form-group"><label>ملاحظات (اختياري)</label><input type="text" placeholder="أي ملاحظة إضافية..."></div>
                 </div>
 
-                <div class="form-group full-width" style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);">
-                    <label style="color: var(--primary); margin-bottom: 10px; display:block; font-size:16px;">🖨️ إضافة خدمات الطباعة</label>
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div class="form-group full-width" style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                    <label style="color: var(--primary); margin-bottom: 5px; display:block;">🖨️ إضافة خدمات الطباعة</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <select id="selCategory" style="flex: 1.5; min-width: 120px;" onchange="filterServicesByCategory()"></select>
                         <select id="selService" style="flex: 2; min-width: 150px;"><option value="">اختر الخدمة...</option></select>
-                        <input type="number" id="qtyService" min="1" value="1" style="width: 90px;" placeholder="العدد">
+                        <input type="number" id="qtyService" min="1" value="1" style="width: 80px;" placeholder="العدد">
                         <button class="btn-add-item" type="button" onclick="addServiceToOrder()">إضافة +</button>
                     </div>
-                    <div id="cartServicesList" style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;"></div>
+                    <div id="cartServicesList" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;"></div>
                 </div>
                 
-                <div class="form-group full-width" style="background: rgba(99, 102, 241, 0.05); padding: 20px; border-radius: 16px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                    <label style="color: var(--indigo); margin-bottom: 10px; display:block; font-size:16px;">📦 إضافة لوازم للكراء</label>
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <div class="form-group full-width" style="background: #eef2ff; padding: 15px; border-radius: 8px; border: 1px solid #c7d2fe;">
+                    <label style="color: var(--indigo); margin-bottom: 5px; display:block;">📦 إضافة لوازم للكراء</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                         <select id="selRental" style="flex: 2; min-width: 150px;"></select>
-                        <input type="number" id="qtyRental" min="1" value="1" style="width: 90px;">
-                        <input type="date" id="dateRentalReturn" style="flex: 1; min-width: 140px;" title="تاريخ الاسترجاع">
+                        <input type="number" id="qtyRental" min="1" value="1" style="width: 80px;">
+                        <input type="date" id="dateRentalReturn" style="flex: 1; min-width: 130px;" title="تاريخ الاسترجاع">
                         <button class="btn-add-item btn-add-rental" type="button" onclick="addRentalToOrder()">إضافة +</button>
                     </div>
-                    <div id="cartRentalsList" style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px;"></div>
+                    <div id="cartRentalsList" style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;"></div>
                 </div>
 
                 <div class="form-row calc-row">
@@ -492,13 +445,13 @@
 
     <!-- نافذة نجاح الحفظ -->
     <div class="modal-overlay no-print" id="successModal">
-        <div class="modal-box" style="text-align: center; max-width: 450px; padding: 40px 30px; margin: auto;">
-             <div style="font-size: 60px; margin-bottom: 15px; text-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);">✅</div>
-             <h2 style="color: var(--text-main); margin-bottom: 10px; font-weight:900;">تم الحفظ بنجاح!</h2>
-             <p style="color: var(--text-muted); margin-bottom: 30px; font-size:16px;">رقم الطلب: <span id="successOrderId" class="order-id-badge" style="font-size:16px;"></span></p>
-             <div style="display: flex; flex-direction: column; gap: 15px; justify-content: center;">
-                 <button class="btn-print" style="width: 100%; justify-content: center; height: 50px;" onclick="printReceipt(currentSavedOrderId)">🖨️ طباعة وصل التسليم (A5)</button>
-                 <button class="btn-cancel" style="width: 100%; height: 50px;" onclick="closeModal('successModal')">العودة للوحة التحكم</button>
+        <div class="modal-box" style="text-align: center; max-width: 400px; padding: 30px; margin: auto;">
+             <div style="font-size: 50px; margin-bottom: 10px;">✅</div>
+             <h2 style="color: var(--text-main); margin-bottom: 10px;">تم الحفظ بنجاح!</h2>
+             <p style="color: var(--text-muted); margin-bottom: 25px;">رقم الطلب: <span id="successOrderId" class="order-id-badge"></span></p>
+             <div style="display: flex; gap: 10px; justify-content: center;">
+                 <button class="btn-print" onclick="printReceipt(currentSavedOrderId)">🖨️ طباعة الوصل (A5)</button>
+                 <button class="btn-cancel" onclick="closeModal('successModal')">إغلاق</button>
              </div>
         </div>
     </div>
@@ -512,46 +465,47 @@
             </div>
             <div class="modal-body" id="ordersListContainer"></div>
             <div class="modal-footer" style="justify-content: center; display: none;" id="btnDaySpecificAdd">
-                <button class="btn-save" style="width: 100%; height:55px; justify-content:center; font-size:18px;" onclick="openNewOrderWithDate()">+ إضافة طلب في هذا اليوم</button>
+                <button class="btn-save" style="width: 100%; justify-content:center;" onclick="openNewOrderWithDate()">+ إضافة طلب في هذا اليوم</button>
             </div>
         </div>
     </div>
 
-    <!-- 📊 شاشة تتبع المواعيد -->
+    <!-- 📊 شاشة التتبع -->
     <div class="modal-overlay no-print" id="trackingModal">
         <div class="modal-box fullscreen-modal">
             <div class="modal-header">
-                <h2>📊 تتبع المواعيد والآجال بذكاء</h2>
+                <h2>📊 تتبع المواعيد والآجال</h2>
                 <button class="close-btn" onclick="closeModal('trackingModal')">×</button>
             </div>
-            <div class="modal-body" style="background: rgba(255,255,255,0.4);">
-                <div style="margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
-                    <span style="background:linear-gradient(135deg, var(--danger), #b91c1c); color:white; padding:8px 15px; border-radius:12px; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(239, 68, 68, 0.3);">أقل من 5 أيام 🟥</span>
-                    <span style="background:linear-gradient(135deg, var(--warning), #c2410c); color:white; padding:8px 15px; border-radius:12px; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(249, 115, 22, 0.3);">أقل من 10 أيام 🟧</span>
-                    <span style="background:linear-gradient(135deg, var(--success), #15803d); color:white; padding:8px 15px; border-radius:12px; font-size:14px; font-weight:bold; box-shadow:0 4px 10px rgba(34, 197, 94, 0.3);">أكثر من 10 أيام 🟩</span>
+            <div class="modal-body" style="background: var(--bg-body);">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <span style="background:#fef2f2; color:var(--danger); padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #fecaca;">أقل من 5 أيام 🟥</span>
+                    <span style="background:#fff7ed; color:var(--warning); padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #fed7aa;">أقل من 10 أيام 🟧</span>
+                    <span style="background:#f0fdf4; color:var(--success); padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; border:1px solid #bbf7d0;">أكثر من 10 أيام 🟩</span>
                 </div>
-                <div id="trackingListContainer"></div>
+                <div id="trackingListContainer" style="display: flex; flex-direction: column; gap: 15px;"></div>
             </div>
         </div>
     </div>
 
-    <!-- ⚙️ الإعدادات -->
+    <!-- ⚙️ الإعدادات (Full Screen 100%) -->
     <div class="modal-overlay no-print" id="settingsModal">
-        <div class="modal-box">
+        <div class="modal-box fullscreen-modal">
             <div class="modal-header">
-                <h2>⚙️ إعدادات النظام والمزامنة السحابية</h2>
+                <h2>⚙️ إعدادات النظام والمزامنة</h2>
                 <button class="close-btn" onclick="closeModal('settingsModal')">×</button>
             </div>
-            <div class="modal-body" style="background: rgba(255,255,255,0.3);">
+            <div class="modal-body" style="background: var(--bg-body);">
+                
                 <div class="settings-section">
                     <h3>🏢 معلومات المطبعة</h3>
-                    <div class="form-group full-width" style="margin-bottom: 20px; border: 2px dashed rgba(59, 130, 246, 0.4); padding: 25px; border-radius: 16px; text-align: center; background: rgba(255,255,255,0.8); transition:0.3s;">
+                    <div class="form-group full-width" style="margin-bottom: 15px; border: 1px dashed var(--primary); padding: 15px; border-radius: 8px; text-align: center; background: #eff6ff;">
                         <label style="color: var(--primary); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                            <span style="font-size: 36px; text-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);">🖼️</span>
-                            <span style="font-size: 16px;">إدراج / تغيير لوغو المطبعة (يظهر في الوصل)</span>
+                            <span style="font-size: 30px;">🖼️</span>
+                            <span>إدراج / تغيير لوغو المطبعة (يظهر في الوصل A5)</span>
                             <input type="file" id="setShopLogoFile" accept="image/*" style="display: none;">
                         </label>
-                        <img id="setShopLogoPreview" src="" style="display: none; max-height: 100px; margin: 15px auto 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <img id="setShopLogoPreview" src="" style="display: none; max-height: 80px; margin: 10px auto 0; border-radius: 8px;">
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>اسم المطبعة</label><input type="text" id="setShopName"></div>
@@ -560,40 +514,46 @@
                         <div class="form-group"><label>العنوان</label><input type="text" id="setShopAddress"></div>
                     </div>
                 </div>
+                
                 <div class="settings-section">
-                    <h3>🏷️ خدمات الطباعة والتصميم</h3>
-                    <div class="form-row" style="align-items: end; margin-bottom: 20px;">
+                    <h3>🏷️ خدمات الطباعة</h3>
+                    <div class="form-row" style="align-items: end; margin-bottom: 15px;">
                         <div class="form-group">
                             <label>صنف الخدمة</label>
-                            <div style="display:flex; gap:8px;">
+                            <div style="display:flex; gap:5px;">
                                 <select id="newServiceCategory" style="flex:1;"></select>
                                 <button class="btn-print-small" onclick="promptNewCategory()" title="إضافة صنف جديد">+ صنف</button>
                             </div>
                         </div>
                         <div class="form-group"><label>اسم الخدمة</label><input type="text" id="newServiceName" placeholder="مثال: كروت شخصية"></div>
                         <div class="form-group"><label>الثمن (درهم)</label><input type="number" id="newServicePrice"></div>
-                        <button class="btn-save" style="height: 50px; justify-content: center;" onclick="addNewService()">إضافة +</button>
+                        <button class="btn-save" style="height: 48px; justify-content: center;" onclick="addNewService()">إضافة +</button>
                     </div>
-                    <div id="settingsServicesList"></div>
+                    <div id="settingsServicesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;"></div>
                 </div>
+                
                 <div class="settings-section">
                     <h3 style="color: var(--indigo);">📦 لوازم الكراء</h3>
-                    <div class="form-row" style="align-items: end; margin-bottom: 20px;">
+                    <div class="form-row" style="align-items: end; margin-bottom: 15px;">
                         <div class="form-group"><label>اسم الأداة</label><input type="text" id="newRentalName"></div>
                         <div class="form-group"><label>الثمن</label><input type="number" id="newRentalPrice"></div>
-                        <button class="btn-save" style="background: linear-gradient(135deg, var(--indigo), #4338ca); height: 50px; justify-content: center;" onclick="addNewRental()">إضافة +</button>
+                        <button class="btn-save" style="background-color: var(--indigo); height: 48px; justify-content: center;" onclick="addNewRental()">إضافة +</button>
                     </div>
-                    <div id="settingsRentalsList"></div>
+                    <div id="settingsRentalsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;"></div>
                 </div>
-                <div class="settings-section">
-                    <h3>💬 رسالة الواتس آب</h3>
-                    <textarea id="setWaTemplate" rows="3"></textarea>
+
+                <div class="form-row">
+                    <div class="settings-section form-group full-width">
+                        <h3>💬 رسالة الواتس آب</h3>
+                        <textarea id="setWaTemplate" rows="3"></textarea>
+                    </div>
                 </div>
+
                 <div class="settings-section">
                     <h3>💾 قاعدة البيانات واسترداد الفايربيس</h3>
-                    <div style="display: flex; gap: 15px;">
-                        <button class="btn-export" style="height:45px;" onclick="exportDataToJSON()">⬇️ تصدير البيانات</button>
-                        <button class="btn-import" style="height:45px;" onclick="document.getElementById('importFile').click()">⬆️ استرداد ومزامنة</button>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-export" onclick="exportDataToJSON()">⬇️ تصدير البيانات</button>
+                        <button class="btn-import" onclick="document.getElementById('importFile').click()">⬆️ استرداد ومزامنة</button>
                         <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importDataFromJSON(event)">
                     </div>
                 </div>
@@ -659,13 +619,13 @@
                         if(o.status === "جاهز") { statusColorClass = "s-ready"; statusEmoji = "✅"; }
                         if(o.status === "تم التسليم") { statusColorClass = "s-delivered"; statusEmoji = "📦"; }
 
-                        let typesHTML = o.types.length > 0 ? o.types.map(t=>`<div>${t.name} <span style="color:#888;">(x${t.qty})</span></div>`).join('') : '<span style="color:#888">لا توجد خدمات طباعة</span>';
-                        let rentalsHTML = o.rentals.length > 0 ? o.rentals.map(r=>`<div>📦 ${r.name} <span style="color:#888;">(x${r.qty})</span> <br><small style="color:var(--danger)">إرجاع: ${r.returnDate}</small></div>`).join('<br>') : '';
+                        let typesHTML = o.types.length > 0 ? o.types.map(t=>`<div style="display:flex;justify-content:space-between;"><span>${t.name}</span><span style="color:#888;">x${t.qty}</span></div>`).join('') : '<span style="color:#888">لا توجد خدمات مطبوعة</span>';
+                        let rentalsHTML = o.rentals.length > 0 ? o.rentals.map(r=>`<div style="display:flex;justify-content:space-between;"><span>📦 ${r.name} <br><small style="color:var(--danger)">إرجاع: ${r.returnDate}</small></span><span style="color:#888;">x${r.qty}</span></div>`).join('<br>') : '';
 
                         bodyBox.innerHTML = `
                             <div class="track-status-box ${statusColorClass}"><h2>${statusEmoji} ${o.status}</h2><p style="margin-top:5px; font-weight:bold;">رقم الطلب: ${o.id}</p></div>
-                            <div class="track-details"><h3>👤 معلومات الزبون</h3><div class="track-row"><span>الاسم:</span> <b>${o.name}</b></div><div class="track-row"><span>موعد التسليم:</span> <b dir="ltr" style="color:var(--primary)">${o.date}</b></div></div>
-                            <div class="track-details"><h3>🖨️ تفاصيل الطلب</h3><div style="font-weight:bold; font-size:15px;">${typesHTML}</div></div>
+                            <div class="track-details"><h3>👤 معلومات الزبون</h3><div class="track-row"><span>الاسم:</span> <b>${o.name}</b></div><div class="track-row"><span>تاريخ التسليم:</span> <b dir="ltr" style="color:var(--primary)">${o.date}</b></div></div>
+                            <div class="track-details"><h3>🖨️ تفاصيل الطلب</h3><div style="font-weight:bold; font-size:15px; display:flex; flex-direction:column; gap:5px;">${typesHTML}</div></div>
                             ${o.rentals.length > 0 ? `<div class="track-details" style="border-color:#c7d2fe; background:#eef2ff;"><h3 style="color:var(--indigo); border-color:#c7d2fe;">📦 لوازم الكراء</h3><div style="font-weight:bold; font-size:15px; color:var(--indigo);">${rentalsHTML}</div></div>` : ''}
                             <div class="track-total-box"><div style="font-size:14px;">المبلغ الباقي للدفع:</div><div style="font-size:20px; font-weight:900;">${o.remaining} درهم</div></div>
                         `;
@@ -710,7 +670,6 @@
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        // ضغط ومعالجة اللوغو
         document.getElementById('setShopLogoFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -718,17 +677,15 @@
                 reader.onload = function(evt) {
                     const img = new Image();
                     img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 300; let scaleSize = 1;
+                        const canvas = document.createElement('canvas'); const MAX_WIDTH = 300; let scaleSize = 1;
                         if(img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
                         canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
                         const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        tempLogoBase64 = canvas.toDataURL('image/jpeg', 0.8); 
+                        tempLogoBase64 = canvas.toDataURL('image/png', 0.9); 
                         document.getElementById('setShopLogoPreview').src = tempLogoBase64; document.getElementById('setShopLogoPreview').style.display = 'block';
                     }
                     img.src = evt.target.result;
-                };
-                reader.readAsDataURL(file);
+                }; reader.readAsDataURL(file);
             }
         });
 
@@ -743,18 +700,13 @@
 
         function saveAllSettings() { 
             shopSettings.name = document.getElementById('setShopName').value; shopSettings.tagline = document.getElementById('setShopTagline').value; shopSettings.phone = document.getElementById('setShopPhone').value; shopSettings.address = document.getElementById('setShopAddress').value; shopSettings.waTemplate = document.getElementById('setWaTemplate').value; 
-            shopSettings.logo = tempLogoBase64;
-            syncSettingsToFirebase(); closeModal('settingsModal'); alert("تم الحفظ بنجاح!"); 
+            shopSettings.logo = tempLogoBase64; syncSettingsToFirebase(); closeModal('settingsModal'); alert("تم الحفظ بنجاح!"); 
         }
 
-        // إدارة الأصناف والخدمات
-        function populateSettingsCategories() {
-            let sel = document.getElementById('newServiceCategory'); sel.innerHTML = "";
-            categoriesData.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
-        }
-        function promptNewCategory() { let c = prompt("أدخل اسم الصنف الجديد (مثال: تصميم، هدايا...):"); if(c && c.trim() !== "") { if(!categoriesData.includes(c.trim())) { categoriesData.push(c.trim()); syncSettingsToFirebase(); } populateSettingsCategories(); document.getElementById('newServiceCategory').value = c.trim(); } }
+        function populateSettingsCategories() { let sel = document.getElementById('newServiceCategory'); sel.innerHTML = ""; categoriesData.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; }); }
+        function promptNewCategory() { let c = prompt("أدخل اسم الصنف الجديد:"); if(c && c.trim() !== "") { if(!categoriesData.includes(c.trim())) { categoriesData.push(c.trim()); syncSettingsToFirebase(); } populateSettingsCategories(); document.getElementById('newServiceCategory').value = c.trim(); } }
         function renderServicesListInSettings() { const list = document.getElementById('settingsServicesList'); list.innerHTML = ""; servicesData.forEach((srv, index) => { let catBadge = srv.category ? `<span style="background:#e2e8f0;font-size:11px;padding:3px 6px;border-radius:4px;margin-left:5px;">${srv.category}</span>` : ''; list.innerHTML += `<div class="service-list-item"><div>${catBadge}<strong>${srv.name}</strong> (${srv.price} د.م)</div><button onclick="removeService(${index})">✖</button></div>`; }); }
-        function addNewService() { let c = document.getElementById('newServiceCategory').value || 'عام'; let n = document.getElementById('newServiceName').value; let p = parseFloat(document.getElementById('newServicePrice').value) || 0; if(n) { servicesData.push({ category: c, name: n, price: p }); document.getElementById('newServiceName').value = ""; syncSettingsToFirebase(); } else { alert("يرجى اختيار الصنف والاسم."); } }
+        function addNewService() { let c = document.getElementById('newServiceCategory').value || 'عام'; let n = document.getElementById('newServiceName').value; let p = parseFloat(document.getElementById('newServicePrice').value) || 0; if(n && c) { servicesData.push({ category: c, name: n, price: p }); document.getElementById('newServiceName').value = ""; syncSettingsToFirebase(); } else { alert("يرجى اختيار الصنف والاسم."); } }
         function removeService(index) { if(confirm("حذف؟")) { servicesData.splice(index, 1); syncSettingsToFirebase(); } }
 
         function renderRentalsListInSettings() { const list = document.getElementById('settingsRentalsList'); list.innerHTML = ""; rentalItemsData.forEach((r, index) => { list.innerHTML += `<div class="service-list-item"><div><strong>${r.name}</strong> <span style="color:var(--indigo)">(${r.price} د.م)</span></div><button onclick="removeRental(${index})">✖</button></div>`; }); }
@@ -762,19 +714,18 @@
         function removeRental(index) { if(confirm("حذف؟")) { rentalItemsData.splice(index, 1); syncSettingsToFirebase(); } }
 
         function exportDataToJSON() { const fullData = { orders: ordersData, settings: shopSettings, services: servicesData, rentals: rentalItemsData, categories: categoriesData }; const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullData)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", `PrintShop_${new Date().toISOString().slice(0,10)}.json`); document.body.appendChild(dl); dl.click(); dl.remove(); }
-        function importDataFromJSON(event) { const reader = new FileReader(); reader.onload = function(e) { try { const imp = JSON.parse(e.target.result); if(imp.orders) { imp.orders.forEach(o => db.collection("orders").doc(o.id).set(o)); } db.collection("config").doc("main").set({ shopSettings: imp.settings || shopSettings, servicesData: imp.services || servicesData, rentalItemsData: imp.rentals || rentalItemsData, categoriesData: imp.categories || categoriesData }); closeModal('settingsModal'); alert("تم المزامنة بنجاح!"); } catch(err) { alert("ملف غير صالح!"); } }; if(event.target.files[0]) reader.readAsText(event.target.files[0]); }
+        function importDataFromJSON(event) { const reader = new FileReader(); reader.onload = function(e) { try { const imp = JSON.parse(e.target.result); if(imp.orders) { imp.orders.forEach(o => db.collection("orders").doc(o.id).set(o)); } db.collection("config").doc("main").set({ shopSettings: imp.settings || shopSettings, servicesData: imp.services || servicesData, rentalItemsData: imp.rentals || rentalItemsData, categoriesData: imp.categories || categoriesData }); closeModal('settingsModal'); alert("تم المزامنة!"); } catch(err) { alert("ملف غير صالح!"); } }; if(event.target.files[0]) reader.readAsText(event.target.files[0]); }
 
-        // --- إضافة طلب جديد (القوائم الذكية) ---
+        // --- قوائم الطلب ---
         function populateNewOrderDropdowns() {
             let catSelect = document.getElementById('selCategory'); catSelect.innerHTML = '<option value="">اختر الصنف...</option>';
-            let uniqueCategories =[...new Set(servicesData.map(s => s.category || 'عام'))]; uniqueCategories.forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
+            categoriesData.forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
             let rentSelect = document.getElementById('selRental'); rentSelect.innerHTML = '<option value="">اختر لوازم الكراء...</option>'; rentalItemsData.forEach((r, i) => rentSelect.innerHTML += `<option value="${i}">${r.name} (${r.price} د.م)</option>`);
             filterServicesByCategory();
         }
-
         function filterServicesByCategory() {
             let cat = document.getElementById('selCategory').value; let srvSelect = document.getElementById('selService'); srvSelect.innerHTML = '<option value="">اختر الخدمة...</option>';
-            if(cat !== "") { servicesData.forEach((s, i) => { let sCat = s.category || 'عام'; if(sCat === cat) { srvSelect.innerHTML += `<option value="${i}">${s.name} (${s.price} د.م)</option>`; } }); }
+            if(cat !== "") { servicesData.forEach((s, i) => { if((s.category||'عام') === cat) { srvSelect.innerHTML += `<option value="${i}">${s.name} (${s.price} د.م)</option>`; } }); }
         }
 
         function addServiceToOrder() { let idx = document.getElementById('selService').value; let qty = parseInt(document.getElementById('qtyService').value) || 1; if (idx === "") return alert("الرجاء اختيار خدمة أولاً."); let srv = servicesData[idx]; cartServices.push({ name: srv.name, qty: qty, price: srv.price, subtotal: srv.price * qty }); document.getElementById('selService').value = ""; document.getElementById('qtyService').value = "1"; renderCartItems(); autoCalculateTotal(); }
@@ -807,7 +758,7 @@
         }
 
         // =========================================================
-        // 🖨️ الطباعة الصافية لمقاس A5 + اللوغو
+        // 🖨️ الطباعة الصافية لمقاس A5 (بدون هوامش إضافية)
         // =========================================================
         function printReceipt(orderId) {
             let order = ordersData.find(o => o.id === orderId); if(!order) return;
@@ -819,8 +770,8 @@
             document.getElementById('r-id').textContent = order.id; document.getElementById('r-today').textContent = order.registerDate; document.getElementById('r-name').textContent = order.name; document.getElementById('r-phone').textContent = order.phone; document.getElementById('r-date').textContent = order.date;
             
             let itemsHTML = '<table class="items-table">';
-            if(order.types && order.types.length > 0) { order.types.forEach(t => { itemsHTML += `<tr><td style="font-weight:bold;">🖨️ ${t.name}</td><td style="width:40px; text-align:left;">x${t.qty}</td></tr>`; }); }
-            if(order.rentals && order.rentals.length > 0) { order.rentals.forEach(r => { itemsHTML += `<tr><td style="font-weight:bold;">📦 ${r.name} <br><span style="font-size:11px; color:#555;">إرجاع: ${r.returnDate}</span></td><td style="width:40px; text-align:left;">x${r.qty}</td></tr>`; }); }
+            if(order.types && order.types.length > 0) { order.types.forEach(t => { itemsHTML += `<tr><td style="font-weight:bold;">🖨️ ${t.name}</td><td style="width:40px; text-align:left; font-weight:bold;">x${t.qty}</td></tr>`; }); }
+            if(order.rentals && order.rentals.length > 0) { order.rentals.forEach(r => { itemsHTML += `<tr><td style="font-weight:bold;">📦 ${r.name} <br><span style="font-size:11px; color:#555;">إرجاع: ${r.returnDate}</span></td><td style="width:40px; text-align:left; font-weight:bold;">x${r.qty}</td></tr>`; }); }
             itemsHTML += '</table>'; document.getElementById('r-items-list').innerHTML = itemsHTML;
             
             document.getElementById('r-total').textContent = order.total + " درهم"; document.getElementById('r-deposit').textContent = order.deposit + " درهم"; document.getElementById('r-remaining').textContent = order.remaining + " درهم";
@@ -851,16 +802,16 @@
         }
 
         function generateOrderCardHTML(o) {
-            let cardBg = o.status === 'تم التسليم' ? 'background-color: rgba(255,255,255,0.4); backdrop-filter: blur(5px); opacity: 0.8;' : '';
+            let cardBg = o.status === 'تم التسليم' ? 'background-color: #f8fafc; opacity: 0.7;' : '';
             let whatsappBtnHTML = o.status === 'جاهز' ? `<button class="btn-whatsapp" onclick="sendWhatsApp('${o.id}')">واتس آب 💬</button>` : '';
             let typesHTML = o.types && o.types.length > 0 ? `<p>🖨️ ${o.types.map(t => `${t.name} (x${t.qty})`).join(' + ')}</p>` : '';
             let rentalHTML = '';
             if(o.rentals && o.rentals.length > 0) {
                 let rentDetails = o.rentals.map((r, i) => {
                     let actionBtn = r.status !== 'تم الإرجاع' ? `<button style="background:white; border:1px solid var(--indigo); color:var(--indigo); padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="markRentalItemReturned('${o.id}', ${i})">تأكيد الإرجاع ✓</button>` : '';
-                    return `<div style="border-bottom: 1px dashed rgba(199, 210, 254, 0.5); padding: 5px 0;"><p style="margin:0; font-size:14px; font-weight:bold;">📦 ${r.name} (العدد: ${r.qty})</p><div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;"><span style="font-size:12px;">إرجاع: <b>${r.returnDate}</b> | الحالة: <b>${r.status}</b></span>${actionBtn}</div></div>`;
+                    return `<div style="border-bottom: 1px dashed #c7d2fe; padding: 5px 0;"><p style="margin:0; font-size:14px; font-weight:bold;">📦 ${r.name} (العدد: ${r.qty})</p><div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;"><span style="font-size:12px;">إرجاع: <b>${r.returnDate}</b> | الحالة: <b>${r.status}</b></span>${actionBtn}</div></div>`;
                 }).join('');
-                rentalHTML = `<div style="background-color: rgba(238, 242, 255, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(199, 210, 254, 0.8); margin-top: 10px;">${rentDetails}</div>`;
+                rentalHTML = `<div style="background-color: #eef2ff; padding: 10px; border-radius: 8px; border: 1px solid #c7d2fe; margin-top: 10px;">${rentDetails}</div>`;
             }
             return `<div class="day-order-card" style="${cardBg}"><div class="order-top-row"><div class="day-order-info" style="flex: 1;"><h4>${o.name} <span class="order-id-badge" style="font-size:11px; margin-right:5px;">${o.id}</span></h4>${typesHTML}<p>📞 <span dir="ltr">${o.phone}</span></p><p style="font-size:12px; color:var(--primary); margin-top:5px; font-weight:bold;">📅 موعد التسليم: ${o.date}</p>${rentalHTML}</div><div style="display:flex; flex-direction:column; gap:10px; align-items:flex-end; margin-right: 15px;"><div class="day-order-price"><div class="total">${o.total} درهم</div><div class="rem">الباقي: ${o.remaining} درهم</div></div><button class="btn-print-small" onclick="printReceipt('${o.id}')">🖨️ طباعة الوصل</button></div></div><div class="status-bar"><div><label style="font-size: 13px; font-weight: bold; color: var(--text-muted);">الحالة: </label><select class="status-select" onchange="changeOrderStatus('${o.id}', this.value)"><option value="قيد الانتظار" ${o.status === 'قيد الانتظار' ? 'selected' : ''}>⏳ قيد الانتظار</option><option value="قيد الإنجاز" ${o.status === 'قيد الإنجاز' ? 'selected' : ''}>⚙️ قيد الإنجاز</option><option value="جاهز" ${o.status === 'جاهز' ? 'selected' : ''}>✅ جاهز</option><option value="تم التسليم" ${o.status === 'تم التسليم' ? 'selected' : ''}>📦 تم التسليم</option></select></div>${whatsappBtnHTML}</div></div>`;
         }
